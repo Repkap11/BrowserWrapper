@@ -1,5 +1,6 @@
 package com.repkap11.browserwrapper;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebChromeClient;
@@ -8,11 +9,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
-import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -35,6 +35,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webview);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setVerticalScrollBarEnabled(false);
+
         fullScreenContainer = findViewById(R.id.fullscreen_container);
 
         InsetHelper.setOnApplyWindowInsetsListener(webView, InsetHelper.ALL);
@@ -42,20 +45,9 @@ public class MainActivity extends AppCompatActivity {
         setupWebView();
         setupBackPressed();
 
+        showSystemBars(null);
         // Load the URL
         webView.loadUrl(TARGET_URL);
-    }
-
-    private void setupWindowInsets() {
-        // Apply insets to the WebView so content isn't hidden behind system bars
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.webview), (v, windowInsets) -> {
-            // Only apply insets if we are NOT in full screen mode
-            if (customView == null) {
-                Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout() | WindowInsetsCompat.Type.ime());
-                v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
-            }
-            return WindowInsetsCompat.CONSUMED;
-        });
     }
 
     private void setupWebView() {
@@ -82,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
                 // Hide WebView, Show FullScreen Container
                 webView.setVisibility(View.GONE);
                 fullScreenContainer.setVisibility(View.VISIBLE);
+                view.setKeepScreenOn(true);
                 fullScreenContainer.addView(view);
 
                 // Hide System Bars (Immersive Mode)
@@ -107,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 // Show System Bars again
-                showSystemBars();
+                showSystemBars(null);
             }
         });
     }
@@ -136,8 +129,6 @@ public class MainActivity extends AppCompatActivity {
 
     // Helper to hide bars for full screen experience
     private void hideSystemBars() {
-//        WindowInsetsControllerCompat windowInsetsController = ViewCompat.getWindowInsetsController(getWindow().getDecorView());
-//        WindowInsetsControllerCompat windowInsetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
 
         windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
@@ -145,24 +136,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Helper to restore bars
-    private void showSystemBars() {
-//        WindowInsetsControllerCompat windowInsetsController = ViewCompat.getWindowInsetsController(getWindow().getDecorView());
-//        WindowInsetsControllerCompat windowInsetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+    private void showSystemBars(@Nullable Configuration config) {
         WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        if (config == null) {
+            config = getResources().getConfiguration();
+        }
 
-        windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+        if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            windowInsetsController.show(WindowInsetsCompat.Type.navigationBars());
+            windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars());
+        } else {
+            windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+            windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_DEFAULT);
+        }
     }
 
-//    private void hideSystemBars() {
-//        WindowInsetsControllerCompat windowInsetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
-//        windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-//        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
-//    }
-
-//    private void showSystemBars() {
-//        WindowInsetsControllerCompat windowInsetsController = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
-//        windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
-//    }
-
-
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (customView == null) {
+            showSystemBars(newConfig);
+        }
+    }
 }
