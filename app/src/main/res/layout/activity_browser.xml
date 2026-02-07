@@ -3,13 +3,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_root"
     android:layout_width="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_height="match_parent">
 
-    <androidx.fragment.app.FragmentContainerView
+    <WebView
+        android:id="@+id/webview"
         android:layout_width="match_parent"
-        android:id="@+id/activity_main_frag"
-        tools:layout="@layout/fragment_main"
-        android:name="com.repkap11.browserwrapper.FragmentMain"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:visibility="gone" />
+
 </FrameLayout>
