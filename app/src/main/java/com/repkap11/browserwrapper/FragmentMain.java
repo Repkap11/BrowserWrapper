@@ -93,7 +93,7 @@ public class FragmentMain extends Fragment {
 
         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(settingsPackage);
         launchIntent.setClassName(settingsPackage, settingsClass);
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+//        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         launchIntent.putExtra(BrowserActivity.EXTRA_URL, url);
         String uuid = UUID.randomUUID().toString();
 

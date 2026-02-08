@@ -60,6 +60,7 @@ public class BrowserActivity extends AppCompatActivity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
 
         // Standard WebViewClient to keep navigation inside the app
         webView.setWebViewClient(new WebViewClient());
