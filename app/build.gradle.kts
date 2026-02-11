@@ -24,6 +24,10 @@ android {
         versionName = "1.0"
     }
 
+    aaptOptions {
+        ignoreAssetsPattern = "!._"
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file(keystoreProperties["storeFile"] as String)

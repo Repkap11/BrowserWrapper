@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Auto Clicker",
+  "version": "1.0",
+  "description": "Clicks the Youtube Premium Ad Skip Button",
+  "permissions": [
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.youtube.com/watch*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "AddSkipper@repkap11.com",
+      "update_url": "https://repkap11.com/files/AddSkipper.xpi"
+    }
+  }
+}

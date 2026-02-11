@@ -19,6 +19,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import org.mozilla.geckoview.AllowOrDeny;
 import org.mozilla.geckoview.BuildConfig;
 import org.mozilla.geckoview.ContentBlocking;
 import org.mozilla.geckoview.GeckoResult;
@@ -58,7 +59,6 @@ public class BrowserActivity extends AppCompatActivity {
 
         WebView webView = null;
         GeckoView geckoView = null;
-        mTabSessionManager = new TabSess();
 
         if (USE_GECKO) {
             setContentView(R.layout.activity_browser_gecko);
@@ -69,46 +69,19 @@ public class BrowserActivity extends AppCompatActivity {
             if (sRuntime == null) {
                 // GeckoRuntime can only be initialized once per process
 
-                final GeckoRuntimeSettings.Builder runtimeSettingsBuilder =
-                        new GeckoRuntimeSettings.Builder();
-
-                if (BuildConfig.DEBUG) {
-                    // In debug builds, we want to load JavaScript resources fresh with
-                    // each build.
-                    runtimeSettingsBuilder.arguments(new String[]{"-purgecaches"});
-                }
-
-                final Bundle extras = getIntent().getExtras();
-                if (extras != null) {
-                    runtimeSettingsBuilder.extras(extras);
-                }
-                runtimeSettingsBuilder
-                        .remoteDebuggingEnabled(false)
-                        .consoleOutput(true)
-                        .contentBlocking(
-                                new ContentBlocking.Settings.Builder()
-                                        .antiTracking(
-                                                ContentBlocking.AntiTracking.DEFAULT | ContentBlocking.AntiTracking.STP)
-                                        .safeBrowsing(ContentBlocking.SafeBrowsing.DEFAULT)
-                                        .cookieBehavior(ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS)
-                                        .cookieBehaviorPrivateMode(ContentBlocking.CookieBehavior.ACCEPT_NON_TRACKERS)
-                                        .enhancedTrackingProtectionLevel(ContentBlocking.EtpLevel.DEFAULT)
-                                        .emailTrackerBlockingPrivateMode(false)
-                                        .build())
-//                        .crashHandler(ExampleCrashHandler.class)
-//                        .preferredColorScheme(mPreferredColorScheme.value())
-                        .javaScriptEnabled(true)
-//                        .extensionsProcessEnabled(mExtensionsProcessEnabled.value())
-//                        .globalPrivacyControlEnabled(mGlobalPrivacyControlEnabled.value())
-                        .aboutConfigEnabled(true);
-
-                sRuntime = GeckoRuntime.create(this, runtimeSettingsBuilder.build());
-//                sRuntime = GeckoRuntime.create(this);
+                sRuntime = GeckoRuntime.create(this);
+                sRuntime.getWebExtensionController().setExtensionProcessDelegate(new WebExtensionController.ExtensionProcessDelegate() {
+                    @Override
+                    public void onDisabledProcessSpawning() {
+                        Log.d(TAG, "onDisabledProcessSpawning() called");
+                        WebExtensionController.ExtensionProcessDelegate.super.onDisabledProcessSpawning();
+                    }
+                });
                 sRuntime.getWebExtensionController().setDebuggerDelegate(new WebExtensionController.DebuggerDelegate() {
                     @Override
                     public void onExtensionListUpdated() {
-                        WebExtensionController.DebuggerDelegate.super.onExtensionListUpdated();
                         Log.d(TAG, "onExtensionListUpdated() called");
+                        WebExtensionController.DebuggerDelegate.super.onExtensionListUpdated();
                     }
                 });
                 sRuntime.setWebNotificationDelegate(new WebNotificationDelegate() {
@@ -130,23 +103,38 @@ public class BrowserActivity extends AppCompatActivity {
                         Log.d(TAG, "onShutdown() called");
                     }
                 });
+                sRuntime.getWebExtensionController().setPromptDelegate(new WebExtensionController.PromptDelegate() {
+                    @Nullable
+                    @Override
+                    public GeckoResult<WebExtension.PermissionPromptResponse> onInstallPromptRequest(@NonNull WebExtension extension, @NonNull String[] permissions, @NonNull String[] origins, @NonNull String[] dataCollectionPermissions) {
+//                    return WebExtensionController.PromptDelegate.super.onInstallPromptRequest(extension, permissions, origins, dataCollectionPermissions);
+                        Log.d(TAG, "onInstallPromptRequest() called with: extension = [" + extension + "], permissions = [" + permissions + "], origins = [" + origins + "], dataCollectionPermissions = [" + dataCollectionPermissions + "]");
+                        return GeckoResult.fromValue(new WebExtension.PermissionPromptResponse(true, true, true));
+                    }
+
+                    @Nullable
+                    @Override
+                    public GeckoResult<AllowOrDeny> onUpdatePrompt(@NonNull WebExtension extension, @NonNull String[] newPermissions, @NonNull String[] newOrigins, @NonNull String[] newDataCollectionPermissions) {
+                        Log.d(TAG, "onUpdatePrompt() called with: extension = [" + extension + "], newPermissions = [" + newPermissions + "], newOrigins = [" + newOrigins + "], newDataCollectionPermissions = [" + newDataCollectionPermissions + "]");
+                        return WebExtensionController.PromptDelegate.super.onUpdatePrompt(extension, newPermissions, newOrigins, newDataCollectionPermissions);
+                    }
+
+                    @Nullable
+                    @Override
+                    public GeckoResult<AllowOrDeny> onOptionalPrompt(@NonNull WebExtension extension, @NonNull String[] permissions, @NonNull String[] origins, @NonNull String[] dataCollectionPermissions) {
+                        Log.d(TAG, "onOptionalPrompt() called with: extension = [" + extension + "], permissions = [" + permissions + "], origins = [" + origins + "], dataCollectionPermissions = [" + dataCollectionPermissions + "]");
+                        return WebExtensionController.PromptDelegate.super.onOptionalPrompt(extension, permissions, origins, dataCollectionPermissions);
+                    }
+                });
+
             }
             session.open(sRuntime);
-
-            Log.i(TAG, "onCreate: Loading ublock");
-//            sRuntime.getWebExtensionController().setPromptDelegate(new WebExtensionController.PromptDelegate() {
-//                @Nullable
-//                @Override
-//                public GeckoResult<WebExtension.PermissionPromptResponse> onInstallPromptRequest(@NonNull WebExtension extension, @NonNull String[] permissions, @NonNull String[] origins, @NonNull String[] dataCollectionPermissions) {
-////                    return WebExtensionController.PromptDelegate.super.onInstallPromptRequest(extension, permissions, origins, dataCollectionPermissions);
-//                    Log.d(TAG, "onInstallPromptRequest() called with: extension = [" + extension + "], permissions = [" + permissions + "], origins = [" + origins + "], dataCollectionPermissions = [" + dataCollectionPermissions + "]");
-//                    return GeckoResult.fromValue(new WebExtension.PermissionPromptResponse(true, true, true));
-//                }
-//            });
-
             geckoView.setSession(session);
 
+            Log.i(TAG, "onCreate: Loading extension");
+
             sRuntime.getWebExtensionController().ensureBuiltIn("resource://android/assets/ublock_origin/", "ublock_origin").accept(new GeckoResult.Consumer<WebExtension>() {
+                //            sRuntime.getWebExtensionController().ensureBuiltIn("resource://android/assets/add_skipper/", "add_skipper").accept(new GeckoResult.Consumer<WebExtension>() {
                 @Override
                 public void accept(@Nullable WebExtension webExtension) {
                     Log.i(TAG, "accept: Good");
