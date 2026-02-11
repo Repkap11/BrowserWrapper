@@ -4,6 +4,7 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -26,10 +27,14 @@ public class BrowserActivity extends AppCompatActivity {
     private FrameLayout fullScreenContainer;
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
+    private CookieManager mCookieManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mCookieManager = CookieManager.getInstance();
+        mCookieManager.setAcceptCookie(true);
+
         InsetHelper.activityOnCreate(this, false, true);
 
         setContentView(R.layout.activity_browser);
@@ -54,6 +59,12 @@ public class BrowserActivity extends AppCompatActivity {
             return;
         }
         webView.loadUrl(url);
+    }
+
+    @Override
+    protected void onPause() {
+        mCookieManager.flush();
+        super.onPause();
     }
 
     private void setupWebView() {
