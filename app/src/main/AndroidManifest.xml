@@ -25,10 +25,10 @@
         android:theme="@style/Theme.BrowserWrapper"
         android:usesCleartextTraffic="true">
         <activity
-            android:taskAffinity="com.repkap11.browserwrapper.browser"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density"
             android:name=".BrowserActivity"
-            android:exported="true" />
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density"
+            android:exported="true"
+            android:taskAffinity="com.repkap11.browserwrapper.browser" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -36,6 +36,23 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!-- Optional: Add a filter for viewing the URL directly (deep linking) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <!-- Optional: Add your app's specific host or path if needed -->
+                <!-- <data android:host="www.example.com" /> -->
             </intent-filter>
         </activity>
     </application>

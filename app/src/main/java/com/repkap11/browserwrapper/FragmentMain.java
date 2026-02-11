@@ -1,5 +1,6 @@
 package com.repkap11.browserwrapper;
 
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -8,7 +9,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,15 +27,26 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
+import androidx.core.text.TextUtilsCompat;
 import androidx.fragment.app.Fragment;
 
 import java.util.UUID;
 
 public class FragmentMain extends Fragment {
 
+    private static final String TAG = FragmentMain.class.getSimpleName();
     private EditText mEditText_name;
     private EditText mEditText_url;
     private Button mButton;
+    private String mInitialUrl = null;
+    private String mInitialName = null;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Activity activity = requireActivity();
+        handleIntent(activity.getIntent());
+    }
 
     @Nullable
     @Override
@@ -39,6 +54,14 @@ public class FragmentMain extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         mEditText_name = rootView.findViewById(R.id.name);
         mEditText_url = rootView.findViewById(R.id.url);
+        if (TextUtils.isEmpty(mEditText_url.getText())) {
+            Log.i(TAG, "onCreateView: Setting url:" + mInitialUrl);
+            mEditText_url.setText(mInitialUrl);
+        }
+        if (TextUtils.isEmpty(mEditText_name.getText())) {
+            Log.i(TAG, "onCreateView: Setting name:" + mInitialName);
+            mEditText_name.setText(mInitialName);
+        }
         mButton = rootView.findViewById(R.id.button);
         mButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -49,6 +72,30 @@ public class FragmentMain extends Fragment {
             }
         });
         return rootView;
+    }
+
+    private void handleIntent(Intent intent) {
+        if (Intent.ACTION_SEND.equals(intent.getAction()) && "text/plain".equals(intent.getType())) {
+            String sharedUrlText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if (sharedUrlText != null) {
+                // Handle the URL here
+                Log.i(TAG, "Received shared URL: " + sharedUrlText);
+                mInitialUrl = sharedUrlText;
+            }
+            String sharedNameText = intent.getStringExtra(Intent.EXTRA_SUBJECT);
+            if (sharedNameText != null) {
+                // Handle the URL here
+                Log.i(TAG, "Received shared URL: " + sharedNameText);
+                mInitialName = sharedNameText;
+            }
+        } else if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            Uri uri = intent.getData();
+            if (uri != null) {
+                // Handle the URL here
+                Log.i(TAG, "Received deep link URL: " + uri.toString());
+                mInitialUrl = uri.toString();
+            }
+        }
     }
 
     @Override
@@ -82,6 +129,9 @@ public class FragmentMain extends Fragment {
     }
 
     public void onIconClicked(String name, String url) {
+        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(url)) {
+            return;
+        }
         Context context = requireContext().getApplicationContext();
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
             Toast.makeText(context, "Pinned Shortcuts Not Supported", Toast.LENGTH_SHORT).show();
@@ -91,11 +141,15 @@ public class FragmentMain extends Fragment {
         String settingsPackage = BrowserActivity.class.getPackageName();
         String settingsClass = BrowserActivity.class.getName();
 
+        String uuid = UUID.randomUUID().toString();
+
+
         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(settingsPackage);
         launchIntent.setClassName(settingsPackage, settingsClass);
-//        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+        launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+        Uri uri = Uri.parse("urn:uuid:" + uuid);
+        launchIntent.setData(uri);
         launchIntent.putExtra(BrowserActivity.EXTRA_URL, url);
-        String uuid = UUID.randomUUID().toString();
 
         ShortcutInfoCompat shortcut = new ShortcutInfoCompat.Builder(context, context.getPackageName() + ":" + FragmentMain.class.getName() + ":" + uuid).setShortLabel(name).setIcon(getAppIcon(context)).setAlwaysBadged().setIntent(launchIntent).build();
 
