@@ -14,12 +14,12 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "com.repkap11.browserwrapper"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.repkap11.browserwrapper"
         minSdk = 33
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }
@@ -63,4 +63,5 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.okhttp)
+    implementation(libs.geckoview.exoplayer2)
 }

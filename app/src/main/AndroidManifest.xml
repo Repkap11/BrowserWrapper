@@ -28,6 +28,7 @@
             android:name=".BrowserActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density"
             android:exported="true"
+            android:windowSoftInputMode="stateUnspecified|adjustResize"
             android:taskAffinity="com.repkap11.browserwrapper.browser" />
         <activity
             android:name=".MainActivity"
