@@ -1,4 +1,5 @@
 <resources>
-    <string name="app_name">BrowserWrapper</string>
+    <string name="app_name">RepWeb</string>
     <string name="create_shortcut">Create Shortcut</string>
+    <string name="generate_favicon">Generate Favicon</string>
 </resources>
