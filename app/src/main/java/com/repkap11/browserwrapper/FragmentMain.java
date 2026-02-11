@@ -197,7 +197,7 @@ public class FragmentMain extends Fragment {
         if (adaptive) {
             return IconCompat.createWithAdaptiveBitmap(bitmap);
         } else {
-            return IconCompat.createWithBitmap(mCurrentFavicon);
+            return IconCompat.createWithBitmap(bitmap);
         }
     }
 
