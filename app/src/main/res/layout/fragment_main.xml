@@ -75,6 +75,7 @@
     <Button
         android:id="@+id/button_generate_icon"
         android:layout_width="0dp"
+        android:lines="2"
         android:layout_height="wrap_content"
         android:text="@string/generate_favicon"
         app:layout_constraintBottom_toBottomOf="@id/favicon_preview"
@@ -93,13 +94,36 @@
         app:layout_constraintTop_toBottomOf="@id/label_favicon"
         tools:src="@tools:sample/avatars" />
 
+    <com.google.android.material.divider.MaterialDivider
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="2dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/favicon_preview" />
+
+    <Button
+        android:id="@+id/button_create_adaptive"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="2dp"
+        android:layout_marginTop="2dp"
+        android:lines="2"
+        android:text="@string/create_adaptive_shortcut"
+        app:layout_constraintLeft_toRightOf="@id/button_create"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider" />
+
     <Button
         android:id="@+id/button_create"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginRight="2dp"
+        android:lines="2"
         android:text="@string/create_shortcut"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/favicon_preview" />
+        app:layout_constraintRight_toLeftOf="@id/button_create_adaptive"
+        app:layout_constraintTop_toBottomOf="@id/divider" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

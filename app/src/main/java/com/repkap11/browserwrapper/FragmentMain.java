@@ -39,10 +39,8 @@ public class FragmentMain extends Fragment {
     private static final String TAG = FragmentMain.class.getSimpleName();
     private EditText mEditText_name;
     private EditText mEditText_url;
-    private Button mButtonCreate;
     private String mInitialUrl = null;
     private String mInitialName = null;
-    private Button mButtonGenerateIcon;
     private Handler mMainHandler;
     private FaviconManager mFavIconManager;
     private ImageView mImageViewFavIcon;
@@ -75,21 +73,20 @@ public class FragmentMain extends Fragment {
             Log.i(TAG, "onCreateView: Setting name:" + mInitialName);
             mEditText_name.setText(mInitialName);
         }
-        mButtonGenerateIcon = rootView.findViewById(R.id.button_generate_icon);
-        mButtonGenerateIcon.setOnClickListener(new View.OnClickListener() {
+        Button buttonGenerateIcon = rootView.findViewById(R.id.button_generate_icon);
+        buttonGenerateIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String url = mEditText_url.getText().toString();
                 // 1. Get the system's preferred launcher icon size
-                ActivityManager am = (ActivityManager) requireContext().getSystemService(Context.ACTIVITY_SERVICE);
-                int iconSize = am.getLauncherLargeIconSize();
+                int iconSize = getIconSize(requireContext());
 
                 mFavIconManager.fetchFavicon(url, new FaviconManager.FaviconCallback() {
                     @Override
                     public void onResult(Bitmap bitmap) {
                         // 2. Scale the bitmap to that size
                         // filter = true ensures a smoother bilinear scaling
-                        if (bitmap == null){
+                        if (bitmap == null) {
                             mCurrentFavicon = null;
                             return;
                         }
@@ -106,17 +103,53 @@ public class FragmentMain extends Fragment {
 
             }
         });
-        mButtonCreate = rootView.findViewById(R.id.button_create);
-        mButtonCreate.setOnClickListener(new View.OnClickListener() {
+        Button buttonCreate = rootView.findViewById(R.id.button_create);
+        buttonCreate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String name = mEditText_name.getText().toString();
                 String url = mEditText_url.getText().toString();
-                onIconClicked(name, url);
+                onIconClicked(name, url, false);
+            }
+        });
+        Button buttonCreateAdaptive = rootView.findViewById(R.id.button_create_adaptive);
+        buttonCreateAdaptive.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String name = mEditText_name.getText().toString();
+                String url = mEditText_url.getText().toString();
+                onIconClicked(name, url, true);
             }
         });
         return rootView;
     }
+
+    private int getIconSize(Context context) {
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        return am.getLauncherLargeIconSize();
+    }
+
+//    private static IconCompat getAppIcon(Context context) {
+//        Drawable drawable = AppCompatResources.getDrawable(context, R.drawable.ic_launcher_background);
+//
+//        if (drawable instanceof BitmapDrawable) {
+//            return IconCompat.createWithBitmap(((BitmapDrawable) drawable).getBitmap());
+//        }
+//        int appIconSize = getAppIconSize(context);
+////        int appIconDensity = getAppIconDensity(context);
+//
+////        final float screenDensity = context.getResources().getDisplayMetrics().density;
+//        final int adaptiveIconOuterSides = (int) Math.ceil(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, context.getResources().getDisplayMetrics()));
+//        final int adaptiveIconSize = appIconSize + adaptiveIconOuterSides;
+//
+//        final Bitmap bitmap = Bitmap.createBitmap(adaptiveIconSize, adaptiveIconSize, Bitmap.Config.ARGB_8888);
+//        final Canvas canvas = new Canvas(bitmap);
+//        canvas.drawColor(Color.WHITE);
+//        drawable.setBounds(adaptiveIconOuterSides, adaptiveIconOuterSides, adaptiveIconSize - adaptiveIconOuterSides, adaptiveIconSize - adaptiveIconOuterSides);
+//        drawable.draw(canvas);
+//        return IconCompat.createWithAdaptiveBitmap(bitmap);
+//    }
+
 
     private void handleIntent(Intent intent) {
         if (Intent.ACTION_SEND.equals(intent.getAction()) && "text/plain".equals(intent.getType())) {
@@ -146,17 +179,29 @@ public class FragmentMain extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     }
 
+    public IconCompat createLauncherIcon(boolean adaptive) {
+        Bitmap bitmap = mCurrentFavicon;
+        if (bitmap == null) {
+            Drawable drawable = AppCompatResources.getDrawable(requireContext(), R.mipmap.ic_launcher);
 
-    public IconCompat createLauncherIcon() {
-        if (mCurrentFavicon == null) {
-            return null;
+            int appIconSize = getIconSize(requireContext());
+            final int adaptiveIconOuterSides = (int) Math.ceil(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics()));
+            final int adaptiveIconSize = appIconSize + adaptiveIconOuterSides;
+
+            bitmap = Bitmap.createBitmap(adaptiveIconSize, adaptiveIconSize, Bitmap.Config.ARGB_8888);
+            final Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(Color.WHITE);
+            drawable.setBounds(adaptiveIconOuterSides, adaptiveIconOuterSides, adaptiveIconSize - adaptiveIconOuterSides, adaptiveIconSize - adaptiveIconOuterSides);
+            drawable.draw(canvas);
         }
-        // 3. Create the IconCompat
-        // Use 'createWithBitmap' to maintain the exact look of the favicon
-        return IconCompat.createWithBitmap(mCurrentFavicon);
+        if (adaptive) {
+            return IconCompat.createWithAdaptiveBitmap(bitmap);
+        } else {
+            return IconCompat.createWithBitmap(mCurrentFavicon);
+        }
     }
 
-    public void onIconClicked(String name, String url) {
+    public void onIconClicked(String name, String url, boolean adaptive) {
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(url)) {
             return;
         }
@@ -179,7 +224,9 @@ public class FragmentMain extends Fragment {
         launchIntent.setData(uri);
         launchIntent.putExtra(BrowserActivity.EXTRA_URL, url);
 
-        ShortcutInfoCompat shortcut = new ShortcutInfoCompat.Builder(context, context.getPackageName() + ":" + FragmentMain.class.getName() + ":" + uuid).setShortLabel(name).setIcon(createLauncherIcon()).setAlwaysBadged().setIntent(launchIntent).build();
+        IconCompat icon = createLauncherIcon(adaptive);
+
+        ShortcutInfoCompat shortcut = new ShortcutInfoCompat.Builder(context, context.getPackageName() + ":" + FragmentMain.class.getName() + ":" + uuid).setShortLabel(name).setIcon(icon).setAlwaysBadged().setIntent(launchIntent).build();
 
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null);
     }
