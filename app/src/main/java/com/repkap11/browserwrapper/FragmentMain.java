@@ -89,6 +89,10 @@ public class FragmentMain extends Fragment {
                     public void onResult(Bitmap bitmap) {
                         // 2. Scale the bitmap to that size
                         // filter = true ensures a smoother bilinear scaling
+                        if (bitmap == null){
+                            mCurrentFavicon = null;
+                            return;
+                        }
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, iconSize, iconSize, true);
                         mMainHandler.post(new Runnable() {
                             @Override

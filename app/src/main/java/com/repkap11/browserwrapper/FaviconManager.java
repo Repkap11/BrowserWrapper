@@ -4,14 +4,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-
 import java.io.InputStream;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -39,9 +37,7 @@ public class FaviconManager {
                 bitmap = fetchLocally(siteUrl);
             }
 
-            Bitmap finalBitmap = bitmap;
-            // Return to UI thread (simplified for example)
-            callback.onResult(finalBitmap);
+            callback.onResult(bitmap);
         });
     }
 
@@ -56,22 +52,55 @@ public class FaviconManager {
 
     private Bitmap fetchLocally(String siteUrl) {
         try {
-            // Use Jsoup to parse the HTML
-            Document doc = Jsoup.connect(siteUrl).get();
-            // Look for link tags with "icon" in the rel attribute
-            Element iconElement = doc.head().select("link[rel~=(?i)^(shortcut|apple-touch-)?icon]").first();
+            Request request = new Request.Builder().url(siteUrl).build();
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    return tryRootFavicon(siteUrl);
+                }
 
-            String iconUrl;
-            if (iconElement != null) {
-                iconUrl = iconElement.attr("abs:href");
-            } else {
-                // Hard fallback to root favicon.ico
-                URL url = new URL(siteUrl);
-                iconUrl = url.getProtocol() + "://" + url.getHost() + "/favicon.ico";
+                String html = response.body().string();
+                String iconUrl = extractIconUrl(html, siteUrl);
+
+                if (iconUrl != null) {
+                    return downloadBitmap(iconUrl);
+                }
             }
-            return downloadBitmap(iconUrl);
         } catch (Exception e) {
             Log.e("Favicon", "Local fetch failed: " + e.getMessage());
+        }
+
+        // Final fallback to domain/favicon.ico
+        return tryRootFavicon(siteUrl);
+    }
+
+    private String extractIconUrl(String html, String siteUrl) {
+        // Regex to find <link> tags with rel containing "icon" and extract the href
+        // This looks for: <link ... rel="...icon..." ... href="url" ... >
+        Pattern pattern = Pattern.compile("<link[^>]+rel=[\"'](?i)[^\"']*(?:icon)[^\"']*[\"'][^>]+href=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(html);
+
+        if (matcher.find()) {
+            String href = matcher.group(1);
+            return resolveUrl(siteUrl, href);
+        }
+        return null;
+    }
+
+    private String resolveUrl(String baseUrl, String relativeUrl) {
+        try {
+            URL base = new URL(baseUrl);
+            return new URL(base, relativeUrl).toString();
+        } catch (Exception e) {
+            return relativeUrl;
+        }
+    }
+
+    private Bitmap tryRootFavicon(String siteUrl) {
+        try {
+            URL url = new URL(siteUrl);
+            String rootIcon = url.getProtocol() + "://" + url.getHost() + "/favicon.ico";
+            return downloadBitmap(rootIcon);
+        } catch (Exception e) {
             return null;
         }
     }
