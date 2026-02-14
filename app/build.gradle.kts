@@ -25,7 +25,8 @@ android {
     }
 
     aaptOptions {
-        ignoreAssetsPattern = "!._"
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
+        noCompress.add("ja")
     }
 
     signingConfigs {

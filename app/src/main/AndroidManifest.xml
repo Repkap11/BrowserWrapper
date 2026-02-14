@@ -19,17 +19,28 @@
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BrowserWrapper"
         android:usesCleartextTraffic="true">
+
         <activity
-            android:name=".BrowserActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density"
+            android:name=".BrowserGeckoActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:enableOnBackInvokedCallback="false"
             android:exported="true"
-            android:windowSoftInputMode="stateUnspecified|adjustResize"
-            android:taskAffinity="com.repkap11.browserwrapper.browser" />
+            android:resizeableActivity="true"
+            android:taskAffinity="com.repkap11.browserwrapper.browser_gecko"
+            android:windowSoftInputMode="stateUnspecified|adjustResize" />
+
+        <activity
+            android:name=".BrowserWebViewActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="true"
+            android:taskAffinity="com.repkap11.browserwrapper.browser_webview"
+            android:windowSoftInputMode="stateUnspecified|adjustResize" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
