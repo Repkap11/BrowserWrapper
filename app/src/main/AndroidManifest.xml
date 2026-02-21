@@ -5,6 +5,7 @@
     <uses-permission
         android:name="android.permission.INSTALL_SHORTCUT"
         android:maxSdkVersion="25" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.UNINSTALL_SHORTCUT"
         android:maxSdkVersion="25" />
@@ -12,6 +13,8 @@
     <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
     <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:allowBackup="true"
@@ -40,6 +43,11 @@
             android:exported="true"
             android:taskAffinity="com.repkap11.browserwrapper.browser_webview"
             android:windowSoftInputMode="stateUnspecified|adjustResize" />
+
+        <service
+            android:name=".DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <activity
             android:name=".MainActivity"

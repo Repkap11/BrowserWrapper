@@ -1,25 +1,44 @@
 package com.repkap11.browserwrapper;
 
+import android.Manifest;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
+import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import org.mozilla.geckoview.GeckoView;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 
 public class BrowserWebViewActivity extends AppCompatActivity {
     private static final String TAG = BrowserWebViewActivity.class.getSimpleName();
@@ -128,6 +147,55 @@ public class BrowserWebViewActivity extends AppCompatActivity {
                 showSystemBars(null);
             }
         });
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                Intent intent = new Intent(BrowserWebViewActivity.this, DownloadService.class);
+                String fileName = URLUtil.guessFileName(url, contentDisposition, mimetype);
+                intent.putExtra("url", url);
+                intent.putExtra("fileName", fileName);
+                intent.putExtra("mimeType", mimetype);
+
+                checkNotificationPermissionAndDownload(intent);
+
+                Toast.makeText(BrowserWebViewActivity.this, "Download: " + fileName, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Notifications enabled! You'll see download progress.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Note: You won't see download progress in the notification bar.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    public void checkNotificationPermissionAndDownload(Intent downloadIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // Request the permission
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
+            } else {
+                // Permission already granted, start the service
+                startServiceSafely(downloadIntent);
+            }
+        } else {
+            // API < 33, no runtime permission needed
+            startServiceSafely(downloadIntent);
+        }
+    }
+
+    private void startServiceSafely(Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
     }
 
     private void setupBackPressed(WebView webView) {
