@@ -1,16 +1,12 @@
 package com.repkap11.browserwrapper;
 
 import android.Manifest;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -33,13 +29,6 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
-import org.mozilla.geckoview.GeckoView;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-
 public class BrowserWebViewActivity extends AppCompatActivity {
     private static final String TAG = BrowserWebViewActivity.class.getSimpleName();
 
@@ -51,6 +40,7 @@ public class BrowserWebViewActivity extends AppCompatActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private CookieManager mCookieManager;
     private WebView mWebView;
+    private Intent mPendingDownloadIntent = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,24 +141,57 @@ public class BrowserWebViewActivity extends AppCompatActivity {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
                 Intent intent = new Intent(BrowserWebViewActivity.this, DownloadService.class);
-                String fileName = URLUtil.guessFileName(url, contentDisposition, mimetype);
+                String fileName = getSmartFileName(url, contentDisposition, mimetype);
                 intent.putExtra("url", url);
                 intent.putExtra("fileName", fileName);
                 intent.putExtra("mimeType", mimetype);
+                intent.putExtra("contentLength", contentLength);
+                Log.i(TAG, "downloadFileWithProgress: Download contentDisposition:" + contentDisposition);
+                Log.i(TAG, "downloadFileWithProgress: Download mimetype:" + mimetype);
+                Log.i(TAG, "downloadFileWithProgress: Download file:" + fileName + " size:" + contentLength);
+
 
                 checkNotificationPermissionAndDownload(intent);
-
-                Toast.makeText(BrowserWebViewActivity.this, "Download: " + fileName, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    public String getSmartFileName(String url, String contentDisposition, String mimeType) {
+        // 1. Try to get the filename from URLUtil first
+        String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+
+        // 2. Check if it ended up with .bin or is missing an extension
+        if (fileName.endsWith(".bin") || !fileName.contains(".")) {
+            // Look at the actual URL path (e.g., https://example.com/video.mp4)
+            String urlPath = Uri.parse(url).getLastPathSegment();
+
+            if (urlPath != null && urlPath.contains(".")) {
+                String extension = urlPath.substring(urlPath.lastIndexOf("."));
+
+                // 3. If the URL has a valid-looking extension, swap it
+                // This fixes "video.bin" -> "video.mp4"
+                if (fileName.contains(".")) {
+                    fileName = fileName.substring(0, fileName.lastIndexOf(".")) + extension;
+                } else {
+                    fileName = fileName + extension;
+                }
+            }
+        }
+        return fileName;
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.d(TAG, "onRequestPermissionsResult() called with: requestCode = [" + requestCode + "], permissions = [" + permissions + "], grantResults = [" + grantResults + "]");
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 101) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Notifications enabled! You'll see download progress.", Toast.LENGTH_SHORT).show();
+                if (mPendingDownloadIntent != null) {
+                    Intent intent = mPendingDownloadIntent;
+                    mPendingDownloadIntent = null;
+                    startServiceSafely(intent);
+                }
             } else {
                 Toast.makeText(this, "Note: You won't see download progress in the notification bar.", Toast.LENGTH_LONG).show();
             }
@@ -179,6 +202,7 @@ public class BrowserWebViewActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 // Request the permission
+                mPendingDownloadIntent = downloadIntent;
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
             } else {
                 // Permission already granted, start the service
@@ -191,6 +215,9 @@ public class BrowserWebViewActivity extends AppCompatActivity {
     }
 
     private void startServiceSafely(Intent intent) {
+        String fileName = intent.getStringExtra("fileName");
+        Toast.makeText(BrowserWebViewActivity.this, "Download: " + fileName, Toast.LENGTH_SHORT).show();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent);
         } else {
