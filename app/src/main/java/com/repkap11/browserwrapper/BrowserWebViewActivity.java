@@ -29,10 +29,14 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 public class BrowserWebViewActivity extends AppCompatActivity {
     private static final String TAG = BrowserWebViewActivity.class.getSimpleName();
 
     public static final String EXTRA_URL = "url";
+    public static final String EXTRA_LIMIT_HORIZONTAL_SCROLL = "limit_h_scroll";
 
     private FrameLayout fullScreenContainer;
     private View customView;
@@ -41,10 +45,15 @@ public class BrowserWebViewActivity extends AppCompatActivity {
     private CookieManager mCookieManager;
     private WebView mWebView;
     private Intent mPendingDownloadIntent = null;
+    private boolean mLimitHScroll;
+    private String mInjectScript = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String url = getIntent().getStringExtra(EXTRA_URL);
+        mLimitHScroll = getIntent().getBooleanExtra(EXTRA_LIMIT_HORIZONTAL_SCROLL, true);
 
         mCookieManager = CookieManager.getInstance();
         mCookieManager.setAcceptCookie(true);
@@ -65,7 +74,7 @@ public class BrowserWebViewActivity extends AppCompatActivity {
 
         showSystemBars(null);
 
-        String url = getIntent().getStringExtra(EXTRA_URL);
+
         // Load the URL
         if (url == null) {
             Log.e(TAG, "onCreate: No url set");
@@ -80,6 +89,22 @@ public class BrowserWebViewActivity extends AppCompatActivity {
         super.onPause();
     }
 
+    private String readAssetFile(String fileName) {
+        String json = null;
+        try {
+            InputStream is = getAssets().open(fileName);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, "UTF-8");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return json;
+    }
+
     private void setupWebView(WebView webView) {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -90,7 +115,19 @@ public class BrowserWebViewActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(true);
 
         // Standard WebViewClient to keep navigation inside the app
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (!mLimitHScroll) {
+                    return;
+                }
+                if (mInjectScript == null) {
+                    mInjectScript = readAssetFile("h_scroll_blocker/h_scroll_blocker.js");
+                }
+                view.evaluateJavascript(mInjectScript, null);
+            }
+        });
 
         // 2) WebChromeClient for Full Screen support
         webView.setWebChromeClient(new WebChromeClient() {

@@ -39,6 +39,7 @@ public class FragmentMain extends Fragment {
     private static final String TAG = FragmentMain.class.getSimpleName();
     private EditText mEditText_name;
     private EditText mEditText_url;
+    private EditText mEditText_favicon_url;
     private String mInitialUrl = null;
     private String mInitialName = null;
     private Handler mMainHandler;
@@ -46,6 +47,8 @@ public class FragmentMain extends Fragment {
     private ImageView mImageViewFavIcon;
     private Bitmap mCurrentFavicon;
     private SwitchCompat mSwitchUseGeckoView;
+    private SwitchCompat mSwitchUseAdaptiveShortcut;
+    private SwitchCompat mSwitchLimitHScroll;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -62,7 +65,10 @@ public class FragmentMain extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         mEditText_name = rootView.findViewById(R.id.name);
         mEditText_url = rootView.findViewById(R.id.url);
+        mEditText_favicon_url = rootView.findViewById(R.id.favicon_url);
         mSwitchUseGeckoView = rootView.findViewById(R.id.switch_use_gecko);
+        mSwitchLimitHScroll = rootView.findViewById(R.id.switch_limit_h_scroll);
+        mSwitchUseAdaptiveShortcut = rootView.findViewById(R.id.switch_use_adaptive_shortcut);
 
         mImageViewFavIcon = rootView.findViewById(R.id.favicon_preview);
         if (mCurrentFavicon != null) {
@@ -76,11 +82,18 @@ public class FragmentMain extends Fragment {
             Log.i(TAG, "onCreateView: Setting name:" + mInitialName);
             mEditText_name.setText(mInitialName);
         }
+        if (TextUtils.isEmpty(mEditText_name.getText())) {
+            mEditText_name.setText("");
+        }
         Button buttonGenerateIcon = rootView.findViewById(R.id.button_generate_icon);
         buttonGenerateIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String url = mEditText_url.getText().toString();
+                String url = mEditText_favicon_url.getText().toString();
+                if (TextUtils.isEmpty(url)) {
+                    url = mEditText_url.getText().toString();
+                }
+
                 // 1. Get the system's preferred launcher icon size
                 int iconSize = getIconSize(requireContext());
 
@@ -113,17 +126,9 @@ public class FragmentMain extends Fragment {
                 String name = mEditText_name.getText().toString();
                 String url = mEditText_url.getText().toString();
                 boolean useGecko = mSwitchUseGeckoView.isChecked();
-                onIconClicked(name, url, false, useGecko);
-            }
-        });
-        Button buttonCreateAdaptive = rootView.findViewById(R.id.button_create_adaptive);
-        buttonCreateAdaptive.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String name = mEditText_name.getText().toString();
-                String url = mEditText_url.getText().toString();
-                boolean useGecko = mSwitchUseGeckoView.isChecked();
-                onIconClicked(name, url, true, useGecko);
+                boolean adaptive = mSwitchUseAdaptiveShortcut.isChecked();
+                boolean limit_h_scroll = mSwitchLimitHScroll.isChecked();
+                onIconClicked(name, url, adaptive, useGecko, limit_h_scroll);
             }
         });
         return rootView;
@@ -205,7 +210,7 @@ public class FragmentMain extends Fragment {
         }
     }
 
-    public void onIconClicked(String name, String url, boolean adaptive, boolean useGecko) {
+    public void onIconClicked(String name, String url, boolean adaptive, boolean useGecko, boolean limit_h_scroll) {
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(url)) {
             return;
         }
@@ -235,6 +240,7 @@ public class FragmentMain extends Fragment {
         Uri uri = Uri.parse("urn:uuid:" + uuid);
         launchIntent.setData(uri);
         launchIntent.putExtra(BrowserGeckoActivity.EXTRA_URL, url);
+        launchIntent.putExtra(BrowserGeckoActivity.EXTRA_LIMIT_HORIZONTAL_SCROLL, limit_h_scroll);
 
 
         IconCompat icon = createLauncherIcon(adaptive);

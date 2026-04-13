@@ -3,4 +3,11 @@
     <string name="create_shortcut">Create Shortcut</string>
     <string name="generate_favicon">Generate Favicon</string>
     <string name="create_adaptive_shortcut">Create Adaptive Shortcut</string>
+    <string name="use_geckoview">Use GeckoView</string>
+    <string name="limit_h_scroll">Limit H Scroll</string>
+    <string name="favicon_url_override">Favicon URL Override</string>
+    <string name="url">URL</string>
+    <string name="instructions">You can use a share intent to populate these from your browser</string>
+    <string name="use_adaptive_shortcut">Adaptive Shortcut Icon</string>
+    <string name="defaults_to_url">Defaults to URL</string>
 </resources>

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BrowserWrapper"
+rootProject.name = "RepWeb"
 include(":app")
  

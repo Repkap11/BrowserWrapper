@@ -3,8 +3,10 @@ package com.repkap11.browserwrapper;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.PointerIcon;
 
 import androidx.activity.OnBackPressedCallback;
@@ -35,7 +37,8 @@ import java.util.List;
 public class BrowserGeckoActivity extends AppCompatActivity {
     private static final String TAG = BrowserGeckoActivity.class.getSimpleName();
 
-    public static final String EXTRA_URL = "url";
+    public static final String EXTRA_URL = BrowserWebViewActivity.EXTRA_URL;
+    public static final String EXTRA_LIMIT_HORIZONTAL_SCROLL = BrowserWebViewActivity.EXTRA_LIMIT_HORIZONTAL_SCROLL;
 
     private static GeckoRuntime sRuntime;
     private GeckoView mGeckoView;
@@ -45,9 +48,24 @@ public class BrowserGeckoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String url = getIntent().getStringExtra(EXTRA_URL);
+        boolean limit_h_scroll = getIntent().getBooleanExtra(EXTRA_LIMIT_HORIZONTAL_SCROLL, true);
+
         InsetHelper.activityOnCreate(this, false, true);
         setContentView(R.layout.activity_browser_gecko);
         mGeckoView = findViewById(R.id.gecko_view);
+
+        TypedValue typedValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.id.background, typedValue, true);
+        int themeBackgroundColor = typedValue.data;
+
+        // If the above doesn't yield a result, you can fallback to a hardcoded dark grey
+        if (themeBackgroundColor == Color.WHITE || themeBackgroundColor == 0) {
+            themeBackgroundColor = Color.parseColor("#121212");
+        }
+
+        mGeckoView.coverUntilFirstPaint(themeBackgroundColor);
         mGeckoView.setActivityContextDelegate(new GeckoView.ActivityContextDelegate() {
             @Nullable
             @Override
@@ -74,16 +92,31 @@ public class BrowserGeckoActivity extends AppCompatActivity {
         mGeckoView.setSession(mGeckoSession);
         Log.i(TAG, "onCreate: Loading extension");
 
-        sRuntime.getWebExtensionController().ensureBuiltIn("resource://android/assets/ublock_origin/", "ublock_origin").accept(new GeckoResult.Consumer<WebExtension>() {
+        WebExtensionController wec = sRuntime.getWebExtensionController();
+        if (limit_h_scroll) {
+            wec.ensureBuiltIn("resource://android/assets/h_scroll_blocker/", "h_scroll_blocker").accept(new GeckoResult.Consumer<WebExtension>() {
+                @Override
+                public void accept(@Nullable WebExtension webExtension) {
+                    Log.i(TAG, "h_scroll_blocker accept: Good");
+                }
+            }, new GeckoResult.Consumer<Throwable>() {
+                @Override
+                public void accept(@Nullable Throwable throwable) {
+                    Log.i(TAG, "h_scroll_blocker accept: Bad:" + (throwable != null ? throwable.getMessage() : null));
+                }
+            });
+        }
+
+        wec.ensureBuiltIn("resource://android/assets/ublock_origin/", "ublock_origin").accept(new GeckoResult.Consumer<WebExtension>() {
             //            sRuntime.getWebExtensionController().ensureBuiltIn("resource://android/assets/add_skipper/", "add_skipper").accept(new GeckoResult.Consumer<WebExtension>() {
             @Override
             public void accept(@Nullable WebExtension webExtension) {
-                Log.i(TAG, "accept: Good");
+                Log.i(TAG, "ublock_origin accept: Good");
             }
         }, new GeckoResult.Consumer<Throwable>() {
             @Override
             public void accept(@Nullable Throwable throwable) {
-                Log.i(TAG, "accept: Bad:" + (throwable != null ? throwable.getMessage() : null));
+                Log.i(TAG, "ublock_origin accept: Bad:" + (throwable != null ? throwable.getMessage() : null));
             }
         });
 
@@ -99,7 +132,6 @@ public class BrowserGeckoActivity extends AppCompatActivity {
 
         InsetHelper.setOnApplyWindowInsetsListener(mGeckoView, InsetHelper.ALL);
 
-        String url = getIntent().getStringExtra(EXTRA_URL);
 
         // Load the URL
         if (url == null) {
